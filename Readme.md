@@ -28,3 +28,17 @@
       - Can sell half of eth, receive LP tokens & add liquidity
       - Rewards stakers, based on remaining balancs: the LP tokens held by the base contract
       - Time limit / block number establishes a strategy length
+
+```
+
+Base Token: $Fuel
+
+Earned @: staking pools, promotions and conversions.
+
+Conversions: erc20 tokens can be deposited into contract that turn into $Fuel at a fixed or dynamic conversion rate.
+
+Staking: erc20 tokens that are whitelisted by governance can be staked and instantly reflect a $Fuel balance based on the conversion rate. (1:100, 1:1, etc...)
+  Earn: earn rewards of a portion of other tokens converted, $Fuel, and LP tokens created by conversions as well.  
+  Withdraw: withdrawing staked tokens will return unspent and unconverted tokes to user upon withdrawal. $Fuel balance will reduce by staked amount at the defined conversion rate. Rewards, and converted fuel will remain spendable and reflected in your balance. 
+  Spend: spending all or a portion of the $Fuel immediately acquired by staking will result in an equivilant portion of your deposit being converted, and otherwise non withdrawable. 
+$Fuel once acquired can 
