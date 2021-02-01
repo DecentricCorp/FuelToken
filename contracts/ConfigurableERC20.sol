@@ -671,9 +671,9 @@ contract Stakable is Context, ERC20 {
                 // delete depositers[this]
                 // delete deposits[this]
                 // set totalDeposits[this] to 0
-                // Mint toMint                
+                _mint(msg.sender, toMint);             
             } else {
-                _mint(msg.sender, toMint);
+                
             }
         }
     }
@@ -702,7 +702,8 @@ contract Stakable is Context, ERC20 {
         require(_allowedTokens[_token], 'Token not allowed to be deposited');
         require(IERC20(_token).allowance(_msgSender(), address(this)) >= _amount, 'Not enough allowance');
         require(IERC20(_token).transferFrom(_msgSender(), address(this), _amount), 'Transfer failed');
-        _deposits[_token][address(_msgSender())] = _amount;
+        uint depositAmount = _deposits[_token][address(_msgSender())];
+        _deposits[_token][address(_msgSender())] = depositAmount.add(_amount);
         _depositTotals[_token] = _depositTotals[_token].add(_amount);
         _depositers[_token].push(_msgSender());
         return true;
