@@ -617,7 +617,7 @@ contract Stakable is Context, ERC20 {
         _allowedTokens[address(this)] = true;
         Strategy storage strategy = _tokenStrategies[address(this)];
         strategy.Rate = 900000000000000;
-        strategy.Action = Actions.MINT;
+        strategy.Action = Actions.DEDUCT_MINT;
         strategy.Blocks = 5;
         strategy.CurrentBlock = block.number;
         strategy.Distributions.push(Distribution(Actors.POOL, 90));
@@ -626,28 +626,35 @@ contract Stakable is Context, ERC20 {
 
     event Received(address, uint);
     event Distributed(Actors, address, uint, uint);
+    event Spy(uint, uint);
     receive() external payable {
         require(msg.value > 0, 'Must provide some ETH');             
         emit Received(msg.sender, msg.value);
         Strategy memory strategy = _tokenStrategies[address(this)];   
-        // Handle case of just mint
-        if (strategy.Action == Actions.MINT) {
-            uint toSell = msg.value.div(strategy.Rate).mul(uint256(10) ** decimals);
+        uint toSell = msg.value.div(strategy.Rate).mul(uint256(10) ** decimals);
+        uint totalDeposits = _depositTotals[address(this)];
+        emit Spy(totalDeposits, toSell);
+
+        // Handle case of just mint or sales pool empty
+        if (strategy.Action == Actions.MINT || (strategy.Action == Actions.DEDUCT_MINT && totalDeposits == 0)) {
             _mint(msg.sender, toSell);
         }
 
         // Handle Distributions
         for (uint i=0; i < strategy.Distributions.length; i++) {
-
             uint ToDistribute = msg.value.mul(strategy.Distributions[i].Percentage).div(100);
             Actors actor = strategy.Distributions[i].To;
             if (actor == Actors.POOL) {
                 address[] memory depositers = _depositers[address(this)];
                 for (uint index=0; index < depositers.length; index++) {
                     address payable depositer = payable(depositers[index]);
-                    uint totalDeposits = _depositTotals[address(this)];
-                    uint depositerPercentageOfDeposits = totalDeposits.div(_deposits[address(this)][depositer]).mul(100);
+                    uint depositerPercentageOfDeposits = _deposits[address(this)][depositer].mul(100).div(totalDeposits);
                     uint toDistributeToDepositer = (ToDistribute.div(100)).mul(depositerPercentageOfDeposits);
+                    // If (Deduct, or Deduct_Mint)
+                    // Calculate depositerPercentageOfDeposits of toSell
+                    // Remove proper amount from deposits
+                    // Remove proper amount from totalDeposits
+                    // if remaining deposit is 0 delete from depositers[this]
                     depositer.transfer(toDistributeToDepositer);
                     emit Distributed(actor, depositer, depositerPercentageOfDeposits, toDistributeToDepositer);
                 }
@@ -655,7 +662,20 @@ contract Stakable is Context, ERC20 {
                 _treasury.transfer(ToDistribute);
                 Distributed(actor, _treasury, strategy.Distributions[i].Percentage, ToDistribute);
             }
-        }       
+        }
+
+        if ((strategy.Action == Actions.DEDUCT_MINT && totalDeposits > 0)) {
+            if (toSell > totalDeposits) { // All depositers will be finished
+                uint toMint = toSell.sub(totalDeposits);
+                // Transfer totalDeposits
+                // delete depositers[this]
+                // delete deposits[this]
+                // set totalDeposits[this] to 0
+                // Mint toMint                
+            } else {
+                _mint(msg.sender, toMint);
+            }
+        }
     }
     
     function isTokenStakable(address _token) public view returns (bool){

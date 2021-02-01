@@ -14,9 +14,10 @@ async function getSimpleToken() {
 contract('Configurable ERC20', (accounts) => {
   const fromOwner = { from: accounts[0] }
   const fromUser1 = { from: accounts[1] }
+  const fromUser2 = { from: accounts[2] }
 
   beforeEach(async () => {
-    Token = await ConfigurableERC20.new(accounts[2], fromOwner);
+    Token = await ConfigurableERC20.new(accounts[3], fromOwner);
   });
   
   describe('Metadata', () => {
@@ -148,20 +149,37 @@ contract('Configurable ERC20', (accounts) => {
   })
   describe('Strategies', ()=>{
     it('sending ETH distributes expected amount of eth to treasury', async ()=>{
-      let oldTreasuryEthBalance = await web3.eth.getBalance(accounts[2])
+      let oldTreasuryEthBalance = await web3.eth.getBalance(accounts[3])
       await Token.sendTransaction({from: accounts[0],value: 1000000000000000000})
-      let treasuryEthBalance = await web3.eth.getBalance(accounts[2])
+      let treasuryEthBalance = await web3.eth.getBalance(accounts[3])
       assert.isTrue(Number(treasuryEthBalance) == Number(oldTreasuryEthBalance) + 100000000000000000)
     })
-    it('sending ETH distributes expected amount of eth to staker', async ()=>{
+    it('sending ETH distributes expected amount of eth to staker with 100% of pool', async ()=>{
       let amount = web3.utils.toBN('1111000000000000000000')
       await Token.mint(accounts[1], amount, fromOwner)
       await Token.approve(Token.address, amount + 1, fromUser1)
       await Token.stake(Token.address, amount, fromUser1)
-      let oldTreasuryEthBalance = await web3.eth.getBalance(accounts[1])
+      let oldEthBalance = await web3.eth.getBalance(accounts[1])
       await Token.sendTransaction({from: accounts[0],value: 1000000000000000000})
-      let treasuryEthBalance = await web3.eth.getBalance(accounts[1])
-      assert.isTrue(Number(treasuryEthBalance) == Number(oldTreasuryEthBalance) + 900000000000000000)
+      let ethBalance = await web3.eth.getBalance(accounts[1])
+      assert.isTrue(Number(ethBalance) == Number(oldEthBalance) + 900000000000000000)
+    })
+    it('sending ETH distributes expected amount of eth to both stakers owning 50% of the pool', async ()=>{
+      let amount = web3.utils.toBN('1111000000000000000000')
+      await Token.mint(accounts[1], amount, fromOwner)
+      await Token.mint(accounts[2], amount, fromOwner)
+      await Token.approve(Token.address, amount + 1, fromUser1)
+      await Token.approve(Token.address, amount + 1, fromUser2)
+      await Token.stake(Token.address, amount, fromUser1)
+      await Token.stake(Token.address, amount, fromUser2)
+      let oldUser1Balance = await web3.eth.getBalance(accounts[1])
+      let oldUser2Balance = await web3.eth.getBalance(accounts[2])
+      let result = await Token.sendTransaction({from: accounts[0],value: 1000000000000000000})
+      let user1Balance = await web3.eth.getBalance(accounts[1])
+      let user2Balance = await web3.eth.getBalance(accounts[2])
+      assert.isTrue(Number(user1Balance) == Number(oldUser1Balance) + 450000000000000000)
+      assert.isTrue(Number(user2Balance) == Number(oldUser2Balance) + 450000000000000000)
+      // truffleAssert.prettyPrintEmittedEvents(result)
     })
     it('Can sell half of eth, receive LP tokens & add liquidity')
     it('Rewards stakers, based on remaining balancs: the LP tokens held by the base contract')
